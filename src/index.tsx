@@ -112,6 +112,8 @@ export interface TriggerProps {
   // ==================== Arrow ====================
   arrow?: boolean | ArrowTypeOuter;
 
+  stopPropagation?: boolean;
+
   // // ========================== Mobile ==========================
   // /** @private Bump fixed position at bottom in mobile.
   //  * This is internal usage currently, do not use in your prod */
@@ -175,6 +177,8 @@ export function generateTrigger(
 
       // Arrow
       arrow,
+
+      stopPropagation,
 
       // Motion
       popupMotion,
@@ -375,7 +379,7 @@ export function generateTrigger(
       hideAction,
     );
 
-    const clickToShow = showActions.has('click');
+    const clickToShow = stopPropagation || showActions.has('click');
     const clickToHide =
       hideActions.has('click') || hideActions.has('contextMenu');
 
@@ -479,6 +483,15 @@ export function generateTrigger(
       preEvent?: (event: Event) => void,
     ) {
       cloneProps[eventName] = (event: any, ...args: any[]) => {
+        const eventWithoutBubble = ['onMouseEnter', 'onPointerEnter'];
+        if (
+          stopPropagation &&
+          eventWithoutBubble.includes(eventName) &&
+          event.target instanceof HTMLElement
+        ) {
+          event.target.click();
+          return;
+        }
         preEvent?.(event);
         triggerOpen(nextOpen, delay);
 
@@ -499,9 +512,12 @@ export function generateTrigger(
           setMousePosByEvent(event);
           triggerOpen(true);
         }
-
         // Pass to origin
         originChildProps.onClick?.(event, ...args);
+
+        if (stopPropagation) {
+          event.stopPropagation();
+        }
       };
     }
 
